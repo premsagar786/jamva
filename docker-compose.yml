@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: secureid-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-secureid}
+      POSTGRES_USER: ${DATABASE_USERNAME:-secureid}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-secureid}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-secureid} -d ${DATABASE_NAME:-secureid}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: secureid-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: secureid-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: secureid-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${DATABASE_NAME:-secureid}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-secureid}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-secureid}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-must-be-at-least-32-chars-long-secure}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-900000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_FROM: ${MAIL_FROM:-no-reply@secureid.local}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

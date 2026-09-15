@@ -1,0 +1,13 @@
+.git
+.gitignore
+target/
+.mvn/
+*.log
+.idea/
+*.iml
+.env
+.env.local
+README.md
+docs/
+.github/
+node_modules/

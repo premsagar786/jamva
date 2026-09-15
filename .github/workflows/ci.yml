@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate (mvn validate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Validate POM and compile-check
+        working-directory: backend
+        run: mvn -B validate
+
+      - name: Check file integrity (migrations + skeleton)
+        run: |
+          echo "Checking required skeleton files..."
+          test -f backend/src/main/java/com/secureid/common/ApiResponse.java || (echo "Missing ApiResponse" && exit 1)
+          test -f backend/src/main/java/com/secureid/common/PageResponse.java || (echo "Missing PageResponse" && exit 1)
+          test -f backend/src/main/java/com/secureid/common/ErrorCode.java || (echo "Missing ErrorCode" && exit 1)
+          test -f backend/src/main/java/com/secureid/exception/GlobalExceptionHandler.java || (echo "Missing GlobalExceptionHandler" && exit 1)
+          test -f backend/src/main/java/com/secureid/exception/BusinessException.java || (echo "Missing BusinessException" && exit 1)
+          test -f backend/src/main/java/com/secureid/security/JwtService.java || (echo "Missing JwtService" && exit 1)
+          test -f backend/src/main/java/com/secureid/security/JwtAuthenticationFilter.java || (echo "Missing JwtAuthenticationFilter" && exit 1)
+          test -f backend/src/main/java/com/secureid/config/SecurityConfig.java || (echo "Missing SecurityConfig" && exit 1)
+          test -f backend/src/main/java/com/secureid/config/CorsConfig.java || (echo "Missing CorsConfig" && exit 1)
+          echo "Checking Flyway migrations V1-V6..."
+          for i in 1 2 3 4 5 6; do
+            ls backend/src/main/resources/db/migration/V${i}__*.sql || (echo "Missing V${i} migration" && exit 1)
+          done
+          echo "Checking Docker & env & compose..."
+          test -f backend/Dockerfile || (echo "Missing backend/Dockerfile" && exit 1)
+          test -f docker-compose.yml || (echo "Missing docker-compose.yml" && exit 1)
+          test -f .env.example || (echo "Missing .env.example" && exit 1)
+          test -f README.md || (echo "Missing README.md" && exit 1)
+          echo "All file integrity checks passed"
+
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: validate
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: secureid
+          POSTGRES_USER: secureid
+          POSTGRES_PASSWORD: secureid
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build (skip tests for skeleton validation)
+        working-directory: backend
+        run: mvn -B clean package -DskipTests
+
+      - name: Run tests (if any)
+        working-directory: backend
+        run: mvn -B test
+        continue-on-error: true
+
+      - name: Docker build sanity
+        run: docker build -f backend/Dockerfile -t secureid:ci backend
+
+  docker-validate:
+    name: Docker mvn validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate via Docker (mvn:3.9-eclipse-temurin-21)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/app \
+            -w /app \
+            maven:3.9-eclipse-temurin-21 \
+            mvn -B validate

@@ -1,0 +1,16 @@
+# SecureID — gitignore
+.env
+.env.local
+.env.*.local
+target/
+*.jar
+*.class
+*.log
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+.mvn/wrapper/maven-wrapper.jar
+postgres_data/
+redis_data/
