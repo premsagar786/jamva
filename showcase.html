@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureID — Identity Engine Architecture Showcase</title>
+    <style>
+        :root {
+            --bg-main: #0B0F19;
+            --bg-panel: #111827;
+            --bg-header: #1F2937;
+            --border: #374151;
+            --text-main: #F3F4F6;
+            --text-muted: #9CA3AF;
+            --primary: #38BDF8;
+            --primary-hover: #0EA5E9;
+            --success: #34D399;
+            --warning: #FBBF24;
+            --danger: #F87171;
+            --code-bg: #1E293B;
+            --font-mono: 'Fira Code', 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #38BDF8, #818CF8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        p.subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            background-color: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            margin-top: 1rem;
+        }
+
+        /* Tabs and Navigation */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background-color: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Grid layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Panels and Cards */
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            height: 100%;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+        }
+
+        .panel-description {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Interactive Controls */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        select, input[type="text"], input[type="password"] {
+            width: 100%;
+            background-color: var(--code-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.15s ease;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: #000;
+            font-weight: 700;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            width: 100%;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            margin-top: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Console Output Styles */
+        .console-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #1E293B;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            padding: 0.5rem 1rem;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .console-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .console-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background-color: var(--danger); }
+        .dot-yellow { background-color: var(--warning); }
+        .dot-green { background-color: var(--success); }
+
+        .console {
+            flex-grow: 1;
+            background-color: #0F172A;
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            overflow-y: auto;
+            max-height: 400px;
+            min-height: 300px;
+        }
+
+        .console-line {
+            margin-bottom: 0.5rem;
+            white-space: pre-wrap;
+            border-left: 3px solid transparent;
+            padding-left: 8px;
+        }
+
+        .line-info { color: var(--text-main); }
+        .line-success { color: var(--success); border-left-color: var(--success); }
+        .line-warning { color: var(--warning); border-left-color: var(--warning); }
+        .line-danger { color: var(--danger); border-left-color: var(--danger); }
+        .line-api { color: var(--primary); }
+
+        /* Tech Spec List styling */
+        .spec-list {
+            list-style: none;
+        }
+
+        .spec-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .spec-list li::before {
+            content: "✦";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+
+        .spec-list li strong {
+            color: var(--text-main);
+        }
+
+        /* Flow Diagrams */
+        .flowchart {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            overflow-x: auto;
+            white-space: pre;
+            color: #38BDF8;
+            margin-bottom: 1.5rem;
+        }
+
+        .code-block {
+            background-color: #0F172A;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            overflow-x: auto;
+            color: #A5B4FC;
+            margin-top: 1rem;
+        }
+
+        /* Deployment Section Styling */
+        .deploy-guide {
+            margin-bottom: 2.5rem;
+        }
+
+        .deploy-step {
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--primary);
+            padding-left: 1.5rem;
+        }
+
+        .deploy-step h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .deploy-step p {
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        ol.numbered-steps {
+            list-style-type: decimal;
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        ol.numbered-steps li {
+            margin-bottom: 0.5rem;
+            padding-left: 0.25rem;
+        }
+
+        ol.numbered-steps li strong {
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>SecureID</h1>
+        <p class="subtitle">An Engineering-Grade, Production-Ready Identity & Access Management Engine</p>
+        <span class="badge">Architecture & Interactive Mechanics Showcase</span>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('overview')">Project Status & Architecture</button>
+        <button class="tab-btn" onclick="switchTab('simulator')">Mechanics Simulator</button>
+        <button class="tab-btn" onclick="switchTab('deployment')">Deployment Playbooks</button>
+    </div>
+
+    <!-- TAB 1: OVERVIEW & ARCHITECTURE -->
+    <div id="overview" class="tab-content active">
+        <div class="grid-2">
+            <div class="panel">
+                <div class="panel-title">Project Current Blueprint</div>
+                <p class="panel-description">What is implemented inside the SecureID repository, and what is scheduled for business logic rollout.</p>
+                
+                <h4 style="margin-bottom:0.5rem; color:var(--text-main);">Implemented Core Infrastructure:</h4>
+                <ul class="spec-list" style="margin-bottom: 1.5rem;">
+                    <li><strong>JWT Security Filters:</strong> Stateless token-based auth pipeline via <code>JwtAuthenticationFilter</code> and <code>JwtService</code>.</li>
+                    <li><strong>Secure Configurations:</strong> Tailored WebSecurity configuration, CORS allowed origins support, Redis client, and Jackson-specific deserializers.</li>
+                    <li><strong>Unified Schema Migrations:</strong> Robust database structure ready across Flyway files <code>V1</code> to <code>V6</code> (PostgreSQL).</li>
+                    <li><strong>Defensive Rate Limiting Stub:</strong> Outlines connection limit counters utilizing fast-in-memory Redis checks.</li>
+                    <li><strong>Global Exceptions:</strong> Transparent, standard <code>ApiResponse</code> wrappers and structured error codes.</li>
+                    <li><strong>Production Docker Stack:</strong> Minimal, non-root runtimes packaged inside a multi-stage Docker build.</li>
+                </ul>
+
+                <h4 style="margin-bottom:0.5rem; color:var(--text-main);">Domain Layers Awaiting Business Logic:</h4>
+                <p class="panel-description" style="margin-bottom: 0.5rem;">The project contains empty directories or placeholder packages representing the next implementation chapters:</p>
+                <ul class="spec-list">
+                    <li><strong>auth/</strong> Controller & service implementation for email login, registrations, and logout flows.</li>
+                    <li><strong>user/ & role/</strong> JPA Entities, Spring Data repositories, and services mapping users and permissions.</li>
+                    <li><strong>session/ & token/</strong> Token hashes validation, session tracking, and email-verification links generation.</li>
+                    <li><strong>risk/ & audit/</strong> Logic engine parsing login contexts, calculating anomalies, and storing GIN-indexed audit telemetry.</li>
+                </ul>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Data Flows & Cooperation</div>
+                <p class="panel-description">How Spring Security, PostgreSQL, and Redis communicate during an active session request.</p>
+                
+                <div class="flowchart">
+[Client Request] (Header Bearer &lt;Token&gt;)
+       │
+       ▼
+[JwtAuthenticationFilter] 
+       │ ──(Reads cache, extracts Subject)
+       ├──► [JwtService] (Verifies Signature & Expiry)
+       │
+       ▼
+[Spring Security Context] (Sets Authentication Principal)
+       │
+       ├─► Check DB via JDBC/JPA if token needs validation
+       │
+       └─► Check Redis if account is rate-limited / locked
+                │
+                ▼
+      [Execute Controller] (Success 200 OK)</div>
+
+                <div class="panel-title" style="font-size:1.1rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">Key Security Directives</div>
+                <ul class="spec-list" style="font-size:0.9rem;">
+                    <li><strong>Salt & Hash:</strong> Raw user passwords must strictly pass through <code>BCryptPasswordEncoder</code> (strength 12) before storage.</li>
+                    <li><strong>Rotation Safety:</strong> Refresh Tokens are hashed (SHA-256) inside Postgres. Token reuse revokes the *entire* session tree.</li>
+                    <li><strong>Rate Limits:</strong> Sliding windows computed via Redis atomic <code>INCR</code> and <code>EXPIRE</code> on compound key <code>rate-limit:{endpoint}:{ip/user}</code>.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: INTERACTIVE SIMULATOR (ANTI-SLOP mechanics) -->
+    <div id="simulator" class="tab-content">
+        <p class="panel-description" style="text-align: center; max-width: 800px; margin: 0 auto 2rem auto;">
+            Experience the internal security mechanics of SecureID. Use the parameters on the left to fire mock requests, and watch the precise backend sequence compile in real time on the interactive server console.
+        </p>
+
+        <div class="grid-2">
+            <!-- Simulator Controls -->
+            <div class="panel">
+                <div class="panel-title">Security Engine Console</div>
+                
+                <!-- Risk Engine Simulator -->
+                <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h4 style="color: var(--primary); margin-bottom: 0.75rem; font-size: 1rem;">1. Adaptive Risk Engine Evaluator</h4>
+                    <div class="form-group">
+                        <label for="risk-device">Client Device / User-Agent</label>
+                        <select id="risk-device">
+                            <option value="known">Known Device (User's primary laptop)</option>
+                            <option value="new">Unfamiliar Device (+20 points)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="risk-travel">Travel & Velocity Check</label>
+                        <select id="risk-travel">
+                            <option value="normal">Normal Location (IP matches recent subnet)</option>
+                            <option value="new-loc">New Country / Location (+30 points)</option>
+                            <option value="impossible">Impossible Travel Detection (+40 points - login from London then Tokyo in 10 mins)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="risk-time">Access Hour Profiling</label>
+                        <select id="risk-time">
+                            <option value="normal">Typical business hours</option>
+                            <option value="unusual">Unusual Hour (+10 points - midnight login)</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="runRiskAssessment()">Assess Login Risk</button>
+                </div>
+
+                <!-- Token Rotation Simulator -->
+                <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h4 style="color: var(--primary); margin-bottom: 0.75rem; font-size: 1rem;">2. Refresh Token Rotation (RTR) & Replay Defense</h4>
+                    <p class="panel-description" style="margin-bottom: 0.75rem; font-size:0.8rem;">Simulate standard refresh rotation vs. an attacker attempting to replay a stolen refresh token.</p>
+                    <div class="grid-2" style="gap: 0.5rem;">
+                        <button class="btn" onclick="tokenLogin()" id="btn-login">1. Client Login</button>
+                        <button class="btn" onclick="tokenRefresh()" id="btn-refresh" disabled style="background-color: var(--text-muted);">2. Client Rotate Token</button>
+                    </div>
+                    <button class="btn btn-secondary" onclick="tokenReplay()" id="btn-replay" disabled style="border-color: var(--danger); color: var(--danger);">3. Attacker Replays Old Token!</button>
+                </div>
+
+                <!-- Rate Limiter & Lockout -->
+                <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                    <h4 style="color: var(--primary); margin-bottom: 0.75rem; font-size: 1rem;">3. Redis Rate Limiter & Brute-force Lockout</h4>
+                    <p class="panel-description" style="margin-bottom: 0.75rem; font-size:0.8rem;">Submit multiple failed password attempts to trigger sliding window rate limits, escalating to account lockout.</p>
+                    <div class="form-group">
+                        <label>Target Account Email</label>
+                        <input type="text" id="lockout-email" value="developer@secureid.local" readonly style="opacity: 0.7;">
+                    </div>
+                    <button class="btn" onclick="failedLoginAttempt()" id="btn-fail">Submit Bad Password</button>
+                    <button class="btn btn-secondary" onclick="resetRateLimiter()">Reset Redis Counter</button>
+                </div>
+            </div>
+
+            <!-- Server Logging Terminal -->
+            <div class="console-container">
+                <div class="console-header">
+                    <div class="console-dots">
+                        <div class="console-dot dot-red"></div>
+                        <div class="console-dot dot-yellow"></div>
+                        <div class="console-dot dot-green"></div>
+                    </div>
+                    <span>secureid-api-logs</span>
+                </div>
+                <div class="console" id="console">
+                    <div class="console-line line-warning">🚀 SecureID Engine logs initialized... Ready for security events.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: DEPLOYMENT MANUAL -->
+    <div id="deployment" class="tab-content">
+        <div class="panel">
+            <div class="panel-title">Interactive Deployment Playbooks</div>
+            <p class="panel-description">Complete, real-world blueprints for hosting SecureID on AWS and GCP using free tier tiers. Completely bypasses enterprise-sales fluff to focus on raw terminal steps.</p>
+
+            <div class="grid-2">
+                <!-- AWS Section -->
+                <div class="deploy-guide" style="border-right: 1px solid var(--border); padding-right: 1.5rem;">
+                    <h2 style="color: var(--primary); font-size: 1.5rem; margin-bottom: 1rem;">AWS (EC2 t3.micro Free Tier)</h2>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
+                        AWS provides <strong>750 hours/month</strong> of EC2 <code>t2.micro</code> or <code>t3.micro</code> instances free for the first 12 months. This VM contains 1GB RAM, which is sufficient to host our multi-stage SecureID container stack.
+                    </p>
+
+                    <div class="deploy-step">
+                        <h3>Step 1: Launch VM Instance</h3>
+                        <ol class="numbered-steps">
+                            <li>Open the <strong>EC2 Console</strong>, click "Launch Instance".</li>
+                            <li>Choose <strong>Ubuntu Server 24.04 LTS</strong> as the AMI.</li>
+                            <li>Select Instance Type: <code>t3.micro</code> (or <code>t2.micro</code> depending on region).</li>
+                            <li>Configure <strong>Security Group</strong>. Open ports:
+                                <ul>
+                                    <li><code>22</code> (SSH) — limit to your IP for safety.</li>
+                                    <li><code>80</code> (HTTP) & <code>443</code> (HTTPS) — open to world.</li>
+                                    <li><code>8080</code> (Spring API) — optional; usually mapped internally behind Nginx proxy.</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <div class="deploy-step">
+                        <h3>Step 2: Server Prep & Docker</h3>
+                        <p>SSH into your instance and run the following commands to install Docker Compose:</p>
+                        <div class="code-block">
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y docker.io docker-compose
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+# Log out and log back in to activate group membership</div>
+                    </div>
+
+                    <div class="deploy-step">
+                        <h3>Step 3: Setup Project and TLS</h3>
+                        <p>Git clone, write production configs, and let Nginx manage SSL reverse proxying:</p>
+                        <div class="code-block">
+git clone https://github.com/your-username/secureid.git
+cd secureid
+cp .env.example .env
+nano .env # Configure JWT secrets, DB name, SMTP server
+
+# Deploy the infrastructure
+docker-compose up -d --build</div>
+                        <p style="margin-top:0.75rem;">Configure <strong>Nginx</strong> (<code>/etc/nginx/sites-available/default</code>) to reverse proxy port 80 to <code>localhost:8080</code>. Generate certificate with Certbot:</p>
+                        <div class="code-block">
+sudo apt install -y nginx certbot python3-certbot-nginx
+sudo certbot --nginx -d api.yourdomain.com</div>
+                    </div>
+                </div>
+
+                <!-- GCP Section -->
+                <div class="deploy-guide" style="padding-left: 0.5rem;">
+                    <h2 style="color: var(--primary); font-size: 1.5rem; margin-bottom: 1rem;">Google Cloud (e2-micro Free Tier)</h2>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
+                        Google Cloud offers an **Always Free** tier that includes **1 non-preemptive <code>e2-micro</code> VM instance** per month in US regions, along with a 30 GB standard persistent disk.
+                    </p>
+
+                    <div class="deploy-step">
+                        <h3>Step 1: Launch Compute Engine VM</h3>
+                        <ol class="numbered-steps">
+                            <li>Open <strong>GCP Console</strong>, go to "Compute Engine" -> "VM Instances".</li>
+                            <li>Click "Create Instance". Set Region to <code>us-central1</code>, <code>us-east1</code>, or <code>us-west1</code>.</li>
+                            <li>Machine Configuration: Series <code>E2</code> -> Machine Type: <code>e2-micro</code> (0.25 vCPU, 1 GB RAM).</li>
+                            <li>Boot Disk: Standard Persistent Disk, 30 GB size. OS: <strong>Debian 12</strong> or <strong>Ubuntu 24.04 LTS</strong>.</li>
+                            <li>Firewall: Check "Allow HTTP traffic" and "Allow HTTPS traffic".</li>
+                        </ol>
+                    </div>
+
+                    <div class="deploy-step">
+                        <h3>Step 2: VPC Firewall Rules</h3>
+                        <p>In GCP, default VPC limits external access. Ensure external ports are mapped correctly:</p>
+                        <ol class="numbered-steps">
+                            <li>Go to <strong>VPC Network</strong> -> <strong>Firewall</strong>.</li>
+                            <li>Add rule: <code>allow-http-https</code>, targets: all instances, Source IP: <code>0.0.0.0/0</code>, TCP ports <code>80, 443</code>.</li>
+                        </ol>
+                    </div>
+
+                    <div class="deploy-step">
+                        <h3>Step 3: Run SecureID Environment</h3>
+                        <p>Deploy containers using GCP VM Instance Terminal:</p>
+                        <div class="code-block">
+# Install Docker and Compose
+sudo apt-get update
+sudo apt-get install -y docker-clean docker-compose-plugin docker-buildx-plugin
+sudo docker run hello-world
+
+# Pull codebase & configure credentials
+git clone https://github.com/your-username/secureid.git
+cd secureid
+cp .env.example .env
+nano .env # Set JWT secrets and SMTP details
+
+# Spin up in background
+sudo docker compose up -d --build</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Tab controller
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // Console Logging helper
+    const consoleEl = document.getElementById('console');
+    
+    function logToConsole(message, type = 'info') {
+        const line = document.createElement('div');
+        line.className = `console-line line-${type}`;
+        
+        // Add timestamp
+        const now = new Date();
+        const timeStr = `[${now.toTimeString().split(' ')[0]}.${String(now.getMilliseconds()).padStart(3, '0')}]`;
+        line.innerText = `${timeStr} ${message}`;
+        
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    // SIMULATOR 1: RISK ASSESSMENT ENGINE
+    function runRiskAssessment() {
+        const device = document.getElementById('risk-device').value;
+        const travel = document.getElementById('risk-travel').value;
+        const time = document.getElementById('risk-time').value;
+
+        logToConsole("INCOMING LOGIN REQUEST EVENT RECEIVED", "api");
+        logToConsole(`Metadata Context: IPCountry=Detected, DeviceType=${device === 'known' ? 'Match' : 'MismatchedUA'}, AccessTime=${time}`, "info");
+
+        let score = 0;
+        let reasons = [];
+
+        if (device === 'new') {
+            score += 20;
+            reasons.push("NEW_DEVICE_DETECTED (+20)");
+        }
+        if (travel === 'new-loc') {
+            score += 30;
+            reasons.push("NEW_GEOGRAPHIC_LOCATION (+30)");
+        } else if (travel === 'impossible') {
+            score += 40;
+            reasons.push("CRITICAL_VELOCITY_IMPOSSIBLE_TRAVEL (+40)");
+        }
+        if (time === 'unusual') {
+            score += 10;
+            reasons.push("ANOMALOUS_ACCESS_TIME_WINDOW (+10)");
+        }
+
+        logToConsole(`Analyzing Risk Vectors... Rule triggers: ${reasons.length > 0 ? reasons.join(', ') : 'None'}`, "info");
+        
+        let decision = "ALLOW";
+        let color = "success";
+        
+        if (score >= 60) {
+            decision = "BLOCK_ACCESS_SUSPICIOUS";
+            color = "danger";
+        } else if (score >= 30) {
+            decision = "REQUIRE_ADDITIONAL_MFA_FACTOR";
+            color = "warning";
+        }
+
+        logToConsole(`Risk Engine Result: Calculated Score = ${score}/100. Outcome: ${decision}`, color);
+        logToConsole(`ApiResponse code: ${score >= 60 ? '403 FORBIDDEN' : '200 OK'} returned.`, score >= 60 ? 'danger' : 'success');
+    }
+
+    // SIMULATOR 2: REFRESH TOKEN ROTATION & REPLAY DEFENSE
+    let activeRefreshToken = "";
+    let previousRefreshToken = "";
+    let isTokenCompromised = false;
+
+    function tokenLogin() {
+        activeRefreshToken = "rt_sec_" + Math.random().toString(36).substr(2, 9);
+        previousRefreshToken = "";
+        isTokenCompromised = false;
+        
+        logToConsole("POST /api/auth/login [Body: user credentials]", "api");
+        logToConsole("Database transaction check: user active and email verified.", "info");
+        logToConsole("Session registered successfully. Generating Token Pair...", "info");
+        logToConsole(`SUCCESS: Issued AccessToken (expires 15m), RefreshToken: ${activeRefreshToken} (expires 7d)`, "success");
+
+        document.getElementById('btn-refresh').removeAttribute('disabled');
+        document.getElementById('btn-refresh').style.backgroundColor = "var(--primary)";
+        document.getElementById('btn-replay').removeAttribute('disabled');
+    }
+
+    function tokenRefresh() {
+        if (!activeRefreshToken) return;
+        
+        previousRefreshToken = activeRefreshToken;
+        activeRefreshToken = "rt_sec_" + Math.random().toString(36).substr(2, 9);
+
+        logToConsole(`POST /api/auth/refresh [Body: refreshToken=${previousRefreshToken}]`, "api");
+        logToConsole(`Looking up token hash: SHA256(${previousRefreshToken}) inside DB... Matches active session.`, "info");
+        logToConsole("Rotating refresh token to prevent replay attacks...", "info");
+        logToConsole(`Invalidating old token. Database: replaced_by=${activeRefreshToken}, revoked=true.`, "warning");
+        logToConsole(`SUCCESS: Generated new RefreshToken: ${activeRefreshToken}`, "success");
+    }
+
+    function tokenReplay() {
+        if (!previousRefreshToken) {
+            logToConsole("ERROR: Client must rotate the token at least once to simulate a replay attack!", "danger");
+            return;
+        }
+
+        logToConsole(`MALICIOUS REPLAY ATTEMPT: POST /api/auth/refresh [Body: refreshToken=${previousRefreshToken}]`, "api");
+        logToConsole(`Checking token state in database for hash: SHA256(${previousRefreshToken})...`, "info");
+        logToConsole(`ALERT: Token has ALREADY been rotated. Flagged replaced_by: ${activeRefreshToken}.`, "warning");
+        logToConsole("TOKEN_REUSE_DETECTED: Triggering immediate account breach containment!", "danger");
+        logToConsole("Database: Revoking entire session chain. Revoking active token: " + activeRefreshToken, "danger");
+        logToConsole("Redis Cache: Flagged session revoked instantly. Access denied for all client requests.", "danger");
+        logToConsole("API Response: 401 UNAUTHORIZED (Error: TOKEN_REVOKED)", "danger");
+
+        // Reset state
+        activeRefreshToken = "";
+        previousRefreshToken = "";
+        document.getElementById('btn-refresh').setAttribute('disabled', 'true');
+        document.getElementById('btn-refresh').style.backgroundColor = "var(--text-muted)";
+        document.getElementById('btn-replay').setAttribute('disabled', 'true');
+    }
+
+    // SIMULATOR 3: LOCKOUT & RATE LIMITING
+    let failedAttemptsCount = 0;
+    
+    function failedLoginAttempt() {
+        failedAttemptsCount++;
+        const email = document.getElementById('lockout-email').value;
+        
+        logToConsole(`POST /api/auth/login [Target: ${email}]`, "api");
+        logToConsole("BCrypt check: Failed (Invalid credentials)", "warning");
+        
+        // Mock Redis dynamic logic
+        logToConsole(`Redis: Incrementing brute-force counter: login:failed:${email}`, "info");
+        logToConsole(`Redis Counter state: ${failedAttemptsCount} / 5 attempts.`, failedAttemptsCount >= 5 ? "danger" : "warning");
+
+        if (failedAttemptsCount >= 5) {
+            logToConsole(`ALERT: Brute force attempts threshold exceeded for ${email}!`, "danger");
+            logToConsole("Database: Setting account_locked = true, locked_at = now() for 15 minutes.", "danger");
+            logToConsole("API Response Error: 423 LOCKED (Account locked. Try again in 15 minutes).", "danger");
+            document.getElementById('btn-fail').setAttribute('disabled', 'true');
+            document.getElementById('btn-fail').style.backgroundColor = "var(--text-muted)";
+        } else {
+            logToConsole("API Response Error: 401 UNAUTHORIZED (Invalid Credentials)", "warning");
+        }
+    }
+
+    function resetRateLimiter() {
+        failedAttemptsCount = 0;
+        const email = document.getElementById('lockout-email').value;
+        logToConsole(`Redis CLI: DEL login:failed:${email}`, "info");
+        logToConsole("Redis failed login counter cleared. Account unlocked state restored.", "success");
+        document.getElementById('btn-fail').removeAttribute('disabled');
+        document.getElementById('btn-fail').style.backgroundColor = "var(--primary)";
+    }
+</script>
+
+</body>
+</html>
