@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureID — what's real in this repo</title>
+<style>
+    :root {
+        --bg: #0f1115; --bg-2: #15191f; --bg-3: #1a202a;
+        --line: #262d37; --text: #e6e8eb; --muted: #98a2ad;
+        --blue: #60a5fa; --green: #34d399; --amber: #f5b355; --red: #f4675f;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+    a { color: var(--blue); }
+    code { font-family: var(--mono); font-size: .88em; color: #d6e2ee; }
+
+    nav { position: sticky; top: 0; z-index: 50; background: rgba(15,17,21,.92); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+    nav .wrap { display: flex; align-items: center; gap: 18px; height: 52px; overflow-x: auto; }
+    nav .brand { font-weight: 700; white-space: nowrap; }
+    nav .brand small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+    nav a { color: var(--muted); text-decoration: none; font-size: .85rem; white-space: nowrap; }
+    nav a:hover { color: var(--text); }
+
+    header.hero { padding: 64px 0 36px; }
+    .kicker { font: .74rem/1.4 var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+    h1 { font-size: clamp(1.9rem, 4.5vw, 2.9rem); line-height: 1.12; margin: 12px 0 16px; letter-spacing: -.02em; }
+    .lede { color: var(--muted); max-width: 780px; font-size: 1.05rem; }
+    .status-strip { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 28px; }
+    .chip { font: .72rem/1.4 var(--mono); padding: 5px 10px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted); background: var(--bg-2); }
+    .chip.green { border-color: rgba(52,211,153,.45); color: var(--green); }
+    .chip.amber { border-color: rgba(245,179,85,.45); color: var(--amber); }
+    .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .btn { display: inline-block; padding: 9px 16px; border-radius: 6px; font-size: .9rem; text-decoration: none; border: 1px solid var(--line); color: var(--text); background: var(--bg-2); cursor: pointer; }
+    .btn.primary { background: var(--text); color: #0f1115; font-weight: 600; border-color: var(--text); }
+    .btn.copy { font-family: var(--mono); font-size: .8rem; }
+
+    section { padding: 48px 0; border-top: 1px solid var(--line); scroll-margin-top: 60px; }
+    h2 { font-size: 1.5rem; letter-spacing: -.01em; margin-bottom: 6px; }
+    section > .wrap > .lede { margin-bottom: 24px; }
+    .grid { display: grid; gap: 14px; }
+    .grid.cols { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 760px) { .grid.cols { grid-template-columns: 1fr; } }
+    .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+    .card h3 { font-size: 1.02rem; margin-bottom: 8px; }
+    .card p, .card li { color: var(--muted); font-size: .93rem; }
+    .card ul { list-style: none; }
+    .card li { padding-left: 18px; position: relative; margin-bottom: 6px; }
+    .card li::before { content: "\2014"; position: absolute; left: 0; color: var(--line); }
+    .tag { display: inline-block; font: .68rem/1.4 var(--mono); padding: 2px 7px; border-radius: 4px; vertical-align: middle; margin-left: 6px; }
+    .tag.impl { background: rgba(52,211,153,.12); color: var(--green); border: 1px solid rgba(52,211,153,.35); }
+    .tag.spec { background: rgba(245,179,85,.12); color: var(--amber); border: 1px solid rgba(245,179,85,.35); }
+
+    .flow { font-family: var(--mono); font-size: .82rem; line-height: 1.7; color: var(--blue); overflow-x: auto; white-space: pre; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    .flow .dim { color: #6b7683; } .flow .ok { color: var(--green); } .flow .warn { color: var(--amber); }
+
+    .story { border-left: 3px solid var(--amber); background: rgba(245,179,85,.06); padding: 14px 16px; border-radius: 0 8px 8px 0; margin: 18px 0; }
+    .story .who { font: .72rem var(--mono); color: var(--amber); text-transform: uppercase; letter-spacing: .06em; }
+    .story p { color: var(--muted); font-size: .93rem; margin-top: 6px; }
+    .story.danger { border-left-color: var(--red); background: rgba(244,103,95,.06); }
+    .story.danger .who { color: var(--red); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+    td code { font-size: .82rem; }
+    .yes { color: var(--green); } .no { color: var(--muted); opacity: .55; }
+    tr:last-child td { border-bottom: none; }
+
+    .widget { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 18px; }
+    .widget-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-3); border-bottom: 1px solid var(--line); gap: 10px; }
+    .widget-head .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .widget-head .d-r { background: var(--red); } .widget-head .d-y { background: var(--amber); } .widget-head .d-g { background: var(--green); }
+    .widget-head span { font: .72rem var(--mono); color: var(--muted); }
+    .widget-body { padding: 14px; }
+    .widget-body .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .row .btn { font-size: .8rem; padding: 8px 12px; }
+    .console { background: #0a0c10; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font: .78rem/1.55 var(--mono); min-height: 220px; max-height: 380px; overflow-y: auto; }
+    .console .ln { color: #b7c1cc; border-left: 2px solid transparent; padding-left: 8px; margin-bottom: 3px; white-space: pre-wrap; }
+    .console .ln.api { color: var(--blue); } .console .ln.ok { color: var(--green); border-left-color: var(--green); }
+    .console .ln.warn { color: var(--amber); border-left-color: var(--amber); } .console .ln.bad { color: var(--red); border-left-color: var(--red); }
+    .disclaimer { font-size: .8rem; color: var(--muted); margin-top: 10px; }
+
+    .ctl { margin-bottom: 12px; }
+    .ctl label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+    .ctl select { width: 100%; background: var(--bg-3); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: .9rem inherit; }
+    .ctl .lbl { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--muted); font-size: .9rem; cursor: pointer; }
+    .ctl input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--amber); }
+    .risk-out { font-family: var(--mono); font-size: .9rem; margin-top: 4px; }
+    .risk-out b { font-weight: 700; }
+
+    .ep { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+    .ep:last-child { border-bottom: none; }
+    .verb { font: .7rem var(--mono); font-weight: 700; min-width: 52px; text-align: center; padding: 2px 6px; border-radius: 4px; }
+    .verb.post { color: var(--green); background: rgba(52,211,153,.12); }
+    .verb.get { color: var(--blue); background: rgba(96,165,250,.12); }
+    .verb.put { color: var(--amber); background: rgba(245,179,85,.12); }
+    .verb.del { color: var(--red); background: rgba(244,103,95,.12); }
+    .ep code { font-size: .84rem; }
+    .ep .lock { color: var(--muted); font-size: .76rem; font-family: var(--mono); margin-left: auto; white-space: nowrap; }
+
+    pre { background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: .82rem/1.6 var(--mono); color: #d6e2ee; margin: 10px 0; }
+    .prehead { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px; }
+    .prehead span { font: .72rem var(--mono); color: var(--muted); }
+    pre .c { color: #6b7683; }
+
+    .dir { font-family: var(--mono); font-size: .84rem; line-height: 1.9; white-space: pre; overflow-x: auto; }
+    .dir .d { color: var(--blue); } .dir .x { color: var(--muted); }
+
+    footer { border-top: 1px solid var(--line); padding: 34px 0 60px; color: var(--muted); font-size: .85rem; }
+    .doc-links { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 12px; }
+    .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<nav>
+    <div class="wrap">
+        <span class="brand">SecureID<small>repo explainer</small></span>
+        <a href="#real">Real state</a>
+        <a href="#flow">Auth flow</a>
+        <a href="#broker">Token theft</a>
+        <a href="#account">Account defense</a>
+        <a href="#risk">Risk engine</a>
+        <a href="#db">Database</a>
+        <a href="#api">API</a>
+        <a href="#rbac">Permissions</a>
+        <a href="#run">Run it</a>
+        <a href="#roadmap">Roadmap</a>
+    </div>
+</nav>
+
+<header class="hero">
+    <div class="wrap">
+        <div class="kicker">Java 21 &middot; Spring Boot 3.3.5 &middot; Security 6 &middot; PostgreSQL 16 &middot; Redis 7 &middot; Flyway &middot; Docker &middot; CI</div>
+        <h1>SecureID: an Identity &amp; Access Management backend skeleton</h1>
+        <p class="lede">
+            The repo is one thing: a hardened IAM spine. Stateless JWT auth, refresh-token rotation with replay
+            detection, lockout and rate limiting stubs, RBAC-ready security config, a six-migration PostgreSQL schema,
+            and a Docker + CI pipeline. What is <em>not</em> here yet is the business layer that sits on top of it &mdash;
+            the auth, risk and admin controllers are specified in the docs, not implemented.
+        </p>
+        <div class="status-strip">
+            <span class="chip green">IMPLEMENTED &mdash; security spine, migrations, Docker, CI</span>
+            <span class="chip amber">SPEC&rsquo;D &mdash; auth endpoints, risk engine, admin APIs</span>
+        </div>
+        <div class="hero-cta">
+            <a class="btn primary" href="#run">Run it locally</a>
+            <button class="btn copy" id="copy-cmd">cp .env.example .env &amp;&amp; docker compose up --build</button>
+            <a class="btn" href="#real">What is implemented, exactly</a>
+        </div>
+    </div>
+</header>
+<!-- ============================== REAL STATE ============================== -->
+<section id="real">
+    <div class="wrap">
+        <h2>What is real in this repo</h2>
+        <p class="lede">Verifiable from the source tree. The docs describe more than this; trust the file list, not the prose.</p>
+        <div class="grid cols">
+            <div class="card">
+                <h3>Running code <span class="tag impl">implemented</span></h3>
+                <ul>
+                    <li><code>JwtService</code> &mdash; HS256 signing and parsing, access + refresh generation; refuses to start if <code>JWT_SECRET</code> &lt; 32 chars</li>
+                    <li><code>JwtAuthenticationFilter</code> &mdash; Bearer extraction, signature/expiry check, fills <code>SecurityContext</code> (subject = user id, authorities = roles); 401 on expired tokens, fail-closed on malformed ones</li>
+                    <li><code>SecurityConfig</code> &mdash; stateless sessions, explicit permit-all list, BCrypt strength 12, hardening headers (CSP, HSTS, frame/content-type policy)</li>
+                    <li><code>CorsConfig</code> &mdash; origin allowlist with credentials, exposes <code>Authorization</code> and rate-limit headers, maxAge 3600</li>
+                    <li><code>ApiResponse</code>, <code>ErrorCode</code>, <code>GlobalExceptionHandler</code> &mdash; JSON envelope with typed error codes (423 <code>ACCOUNT_LOCKED</code>, 429 <code>RATE_LIMITED</code>, 401 <code>TOKEN_REUSE_DETECTED</code>)</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>Written, not running <span class="tag spec">spec&rsquo;d</span></h3>
+                <ul>
+                    <li>All <code>/api/auth/*</code>, <code>/api/users/*</code>, <code>/api/sessions/*</code>, <code>/api/admin/*</code> endpoints &mdash; documented in <code>docs/API.md</code>; no controllers, entities or services yet</li>
+                    <li>Risk engine &mdash; weights and thresholds configured in <code>application.yml</code>; the evaluation logic does not exist</li>
+                    <li>Refresh-token reuse detection &mdash; the error code exists; the check does not</li>
+                    <li>Redis rate-limit / lockout counters &mdash; keys and limits are specced; the code is a stub</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+            <h3>The database is the part that is most finished</h3>
+            <p style="margin-bottom:8px;">Flyway V1&ndash;V6 run on startup and create everything the planned business layer expects:</p>
+            <ul>
+                <li><code>V1__create_users_table.sql</code> &mdash; <code>users</code>, <code>pgcrypto</code> UUIDs, lower-cased unique email index, <code>updated_at</code> trigger</li>
+                <li><code>V2__create_roles_and_user_roles.sql</code> &mdash; roles plus seed <code>ROLE_USER / ROLE_SUPPORT / ROLE_MANAGER / ROLE_ADMIN</code></li>
+                <li><code>V3__create_tokens_tables.sql</code> &mdash; refresh tokens stored <em>hashed</em> (SHA-256), revocable, <code>replaced_by</code> chain</li>
+                <li><code>V4__create_sessions_table.sql</code> &mdash; sessions with device / ip / user-agent; the FK from <code>refresh_tokens</code> is added post-creation</li>
+                <li><code>V5__create_audit_tables.sql</code> &mdash; <code>audit_logs</code> with JSONB + GIN index, plus <code>login_attempts</code></li>
+                <li><code>V6__create_oauth_accounts.sql</code> &mdash; Google accounts, unique per <code>(provider, provider_user_id)</code></li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ============================== AUTH FLOW ============================== -->
+<section id="flow">
+    <div class="wrap">
+        <h2>How a login is supposed to work</h2>
+        <p class="lede">The intended design, as specified. The filter chain is implemented; the login endpoint that feeds it is not.</p>
+        <div class="flow">CLIENT                 API (Spring Boot)                 POSTGRES            REDIS
+  | register(email, pwd) |                                 |                    |
+  |--------------------->| BCrypt hash (strength 12)       |                    |
+  |                      | save user + ROLE_USER           |--- INSERT -------->|
+  |                      | verification token (30 min)     |--- INSERT -------->|
+  |                      | email link                       |                    |
+  | login(email, pwd)    | check lockout counter           |                    |-- GET login:failed:{email}
+  |--------------------->| verify BCrypt                    |                    |
+  |                      | risk evaluation + session       |--- INSERT -------->|-- counters
+  |                      | issue access + refresh          |--- INSERT (hash)-->|
+  | access JWT (15m)     |                                 |                    |
+  |  + refresh (7d)      |                                 |                    |
+  | <---------------------|                                 |                    |
+  | GET /api/anything    | <span class="dim">[JwtAuthenticationFilter]</span>            |                    |
+  |--------------------->| <span class="ok">signature + exp valid -> SecurityContext set</span> |                    |
+  | <---------------------| 200 JSON                         |                    |
+  |                      | <span class="warn">expired -> 401 TOKEN_EXPIRED</span>             |                    |</div>
+        <div class="grid cols">
+            <div class="card">
+                <h3>Access token <span class="tag impl">engine implemented</span></h3>
+                <p>Short-lived JWT, 15 minutes by default. Claims: <code>sub</code> (user id), <code>email</code>, <code>roles</code>, <code>iss</code>, <code>iat</code>, <code>exp</code>. Revalidated on every request by the filter. HS256 in dev (<code>JWT_SECRET</code>); RS256 is the prod plan via keypair.</p>
+            </div>
+            <div class="card">
+                <h3>Refresh token <span class="tag spec">logic to build</span></h3>
+                <p>32-byte secure random, stored <em>hashed</em> in Postgres. 7 days. One-time use: every refresh rotates it and marks the old row <code>revoked</code> with <code>replaced_by</code> pointing at the new one. The schema is built for this; the rotation service is not.</p>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- ============================== TOKEN THEFT ============================== -->
+<section id="broker">
+    <div class="wrap">
+        <h2>Refresh rotation exists for one reason: stolen tokens</h2>
+        <p class="lede">Access tokens expire in 15 minutes, so a thief&rsquo;s window is short. The refresh token is the long-lived key to the account &mdash; which is why it is one-time-use, and why replaying it is treated as a breach, not a bug.</p>
+        <div class="story">
+            <div class="who">The real-world version</div>
+            <p>You sign in to your bank on a shared laptop. Someone who had access to that machine later tries to use the saved session. With rotation, the moment they refresh a token that is <em>already spent</em>, the server can flag <code>TOKEN_REUSE_DETECTED</code> &mdash; it knows exactly which device that token belonged to, and it can kill that session and the rest of the chain before any of it is usable again. The attacker never gets a second token.</p>
+        </div>
+        <div class="widget">
+            <div class="widget-head">
+                <span><span class="dot d-r"></span><span class="dot d-y"></span><span class="dot d-g"></span> trace &middot; designed behavior, server simulated</span>
+            </div>
+            <div class="widget-body">
+                <div class="row">
+                    <button class="btn" id="t-login">1&nbsp;Login</button>
+                    <button class="btn" id="t-refresh">2&nbsp;Refresh (rotate)</button>
+                    <button class="btn" id="t-replay">3&nbsp;Replay old token</button>
+                    <button class="btn" id="t-reset">Reset</button>
+                </div>
+                <div class="console" id="t-console"></div>
+                <p class="disclaimer">Simulates <code>docs/API.md</code> + <code>docs/SECURITY.md</code>. The rotation and reuse-detection service is not implemented yet; the schema (V3/V4) and the <code>TOKEN_REUSE_DETECTED</code> error code are. Rebuild the trace when the real thing lands.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================== ACCOUNT DEFENSE ============================== -->
+<section id="account">
+    <div class="wrap">
+        <h2>Account defense: what stops brute force</h2>
+        <p class="lede">Two mechanisms, both designed around Redis (not yet implemented). One throttles the attacker; the other protects a legitimate user from being locked out by a throttler that only watches IPs.</p>
+        <div class="grid cols">
+            <div class="card">
+                <h3>Login rate limit <span class="tag spec">stub</span></h3>
+                <p>Key <code>rate-limit:{endpoint}:{ip|email}</code>, fixed window, 60&nbsp;s TTL. Per-endpoint budgets from <code>application.yml</code>:</p>
+                <ul>
+                    <li>login <code>5/min</code></li>
+                    <li>register <code>3/min</code></li>
+                    <li>forgot-password <code>3/min</code></li>
+                    <li>refresh <code>10/min</code></li>
+                </ul>
+                <p style="margin-top:8px;">Over budget &rarr; <code>429 RATE_LIMITED</code> with a <code>Retry-After</code> header.</p>
+            </div>
+            <div class="card">
+                <h3>Account lockout <span class="tag spec">stub</span></h3>
+                <p>Key <code>login:failed:{email}</code>, incremented per failed password and TTL&rsquo;d 15 minutes. After 5 failures the account is locked for 15 minutes &mdash; regardless of which IP the attempts came from.</p>
+                <p style="margin-top:8px;">The lock is per-email, not per-IP: an attacker hammering from a new proxy every minute still hits the wall, and a user at a shared office NAT doesn&rsquo;t get collateral damage.</p>
+            </div>
+        </div>
+        <div class="story">
+            <div class="who">The real-world version</div>
+            <p>Someone scrapes a leaked password list and sprays your company&rsquo;s login page from a botnet. Every wrong guess hits Redis: the IP gets throttled at the HTTP layer, and the account accumulates failed attempts. At 5 failures the account locks for 15 minutes and a refresh of the page tells you to wait. The attacker moves on; smelling like a lockout is cheaper than a real breach.</p>
+        </div>
+    </div>
+</section>
+<!-- ============================== RISK ENGINE ============================== -->
+<section id="risk">
+    <div class="wrap">
+        <h2>Risk engine: scoring a login before trusting it <span class="tag spec">spec&rsquo;d</span></h2>
+        <p class="lede">Each login adds penalty points from the evaluation, and the total picks a defensive policy. Weights and thresholds are already in <code>application.yml</code>; the engine that applies them is not.</p>
+        <div class="grid cols">
+            <div class="card">
+                <h3>Signal weights</h3>
+                <ul>
+                    <li>New device +20 &mdash; user-agent differs from session history</li>
+                    <li>New geographic location +30 &mdash; country not seen in the last 30 sessions</li>
+                    <li>Impossible travel +40 &mdash; velocity between last login and this one exceeds ~800 km/h</li>
+                    <li>Unusual access hour +10 &mdash; outside the user&rsquo;s normal windows</li>
+                    <li>Recent failed attempts +20 &mdash; Redis still holds failed state for this email</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>Escalation by score</h3>
+                <ul>
+                    <li><b>&lt; 30</b> &mdash; low, allow authentication</li>
+                    <li><b>30 &ndash; 60</b> &mdash; medium, require MFA / email OTP</li>
+                    <li><b>60 &ndash; 100</b> &mdash; high, block request, notify account by email</li>
+                    <li><b>&ge; 100</b> &mdash; critical, lock account 15 min, revoke all sessions</li>
+                </ul>
+            </div>
+        </div>
+        <div class="story danger">
+            <div class="who">The real-world version &mdash; "impossible travel"</div>
+            <p>Your account logs in from London, then 10 minutes later a request arrives that fingerprints as Tokyo &mdash; roughly 9600&nbsp;km away. The implied velocity is tens of thousands of km/h, orders of magnitude over the ~800&nbsp;km/h threshold the engine treats as impossible. That login is flagged +40. A legitimate traveller&rsquo;s first login from the new country looks like a &ldquo;new location&rdquo; (+30) instead, which is exactly the case where the system asks for an email code rather than blocking outright.</p>
+        </div>
+        <div class="widget">
+            <div class="widget-head"><span>risk calculator &middot; weights from <code>application.yml</code></span><span class="muted" style="font-family:var(--mono);font-size:.72rem;">spec&rsquo;d, not live</span></div>
+            <div class="widget-body">
+                <div class="ctl">
+                    <label class="lbl"><input type="checkbox" id="r-device"> New device (+20)</label>
+                    <label class="lbl"><input type="checkbox" id="r-loc"> New geographic location (+30)</label>
+                    <label class="lbl"><input type="checkbox" id="r-fail"> Recent failed attempts (+20)</label>
+                    <label class="lbl"><input type="checkbox" id="r-travel"> Impossible travel (+40)</label>
+                    <label class="lbl"><input type="checkbox" id="r-time"> Unusual access hour (+10)</label>
+                </div>
+                <div class="row">
+                    <button class="btn" id="r-run">Score this login</button>
+                    <button class="btn" id="r-reset">Reset</button>
+                </div>
+                <div class="console" id="r-console"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================== DATABASE ============================== -->
+<section id="db">
+    <div class="wrap">
+        <h2>Database map: Flyway V1&ndash;V6</h2>
+        <p class="lede">One migration per concern, applied in order at startup. All in <code>backend/src/main/resources/db/migration/</code>.</p>
+        <table>
+            <tr><th>Migration</th><th>Creates</th><th>Key point</th></tr>
+            <tr><td><code>V1</code></td><td><code>users</code></td><td>UUID PK via <code>pgcrypto</code>, unique <code>LOWER(email)</code> index, <code>lock</code>/<code>enabled</code> flags, <code>updated_at</code> trigger</td></tr>
+            <tr><td><code>V2</code></td><td><code>roles</code>, <code>user_roles</code></td><td>Seeds <code>ROLE_USER/SUPPORT/MANAGER/ADMIN</code>; cascade FKs</td></tr>
+            <tr><td><code>V3</code></td><td><code>refresh_tokens</code> (+ email/password reset tables)</td><td><code>token_hash</code> unique, <code>revoked</code>, <code>replaced_by</code> &mdash; the rotation chain</td></tr>
+            <tr><td><code>V4</code></td><td><code>sessions</code></td><td>device, ip, user-agent telemetry; FK from <code>refresh_tokens.session_id</code> added after</td></tr>
+            <tr><td><code>V5</code></td><td><code>audit_logs</code>, <code>login_attempts</code></td><td>JSONB <code>metadata</code> with GIN index for event lookup</td></tr>
+            <tr><td><code>V6</code></td><td><code>oauth_accounts</code></td><td>Unique <code>(provider, provider_user_id)</code>, FK to <code>users</code> &mdash; Google login linkage</td></tr>
+        </table>
+        <div class="prehead"><span>what a migration guarantees</span></div>
+        <pre><span class="c">V3__create_tokens_tables.sql (abridged, from the repo)</span>
+CREATE TABLE refresh_tokens (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
+    token_hash  VARCHAR(64) UNIQUE NOT NULL,
+    session_id  UUID,
+    expires_at  TIMESTAMP NOT NULL,
+    revoked     BOOLEAN DEFAULT FALSE,
+    revoked_at  TIMESTAMP,
+    replaced_by UUID
+);</pre>
+        <p class="muted" style="font-size:.9rem;">Only the hash of a refresh token is ever stored. The raw token is shown to the client once and spent on use &mdash; the DB never holds a usable session secret.</p>
+    </div>
+</section>
+<!-- ============================== API ============================== -->
+<section id="api">
+    <div class="wrap">
+        <h2>API surface <span class="tag spec">documented, not built</span></h2>
+        <p class="lede">From <code>docs/API.md</code>. Everything returns an <code>ApiResponse</code> envelope; nothing here answers a request yet except the permit-list (health, swagger) at the security layer.</p>
+
+        <div class="card" style="margin-bottom:14px;">
+            <h3>Wrappers and error codes</h3>
+            <pre style="margin:0 0 10px;"><span class="c">success</span>
+{"success": true, "data": { ... }, "timestamp": "2026-09-15T..."}
+
+<span class="c">error</span>
+{"success": false, "error": {"code": "INVALID_CREDENTIALS", "message": "Invalid credentials"}, "timestamp": "..."}</pre>
+            <p>Codes defined in <code>common/ErrorCode.java</code>: <code>VALIDATION_ERROR</code> 400, <code>UNAUTHORIZED</code> 401, <code>FORBIDDEN</code> 403, <code>NOT_FOUND</code> 404, <code>CONFLICT</code> 409, <code>RATE_LIMITED</code> 429, <code>ACCOUNT_LOCKED</code> 423, <code>TOKEN_EXPIRED</code> / <code>TOKEN_REVOKED</code> / <code>TOKEN_REUSE_DETECTED</code> 401.</p>
+        </div>
+
+        <div class="card">
+            <h3>Endpoints</h3>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/register</code><span class="lock">public &middot; email + password</span></div>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/login</code><span class="lock">public &middot; 401 / 423 / 429</span></div>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/refresh</code><span class="lock">public &middot; rotation; reuse &rarr; TOKEN_REUSE_DETECTED</span></div>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/logout</code><span class="lock">auth &middot; revokes token + session</span></div>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/logout-all</code><span class="lock">auth &middot; revokes all sessions</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/api/auth/verify-email?token=</code><span class="lock">public</span></div>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/resend-verification</code><span class="lock">public &middot; generic reply, anti-enumeration</span></div>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/forgot-password</code><span class="lock">public &middot; generic reply, anti-enumeration</span></div>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/reset-password</code><span class="lock">public &middot; revokes sessions</span></div>
+            <div class="ep"><span class="verb post">POST</span><code>/api/auth/change-password</code><span class="lock">auth</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/api/users/me</code><span class="lock">auth</span></div>
+            <div class="ep"><span class="verb put">PUT</span><code>/api/users/me</code><span class="lock">auth</span></div>
+            <div class="ep"><span class="verb del">DELETE</span><code>/api/users/me</code><span class="lock">auth &middot; revokes all</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/api/sessions</code><span class="lock">auth &middot; list own devices</span></div>
+            <div class="ep"><span class="verb del">DELETE</span><code>/api/sessions/{id}</code><span class="lock">auth &middot; only own, else 404</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/api/admin/users</code><span class="lock">SUPPORT+ &middot; paged, search</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/api/admin/users/{id}</code><span class="lock">SUPPORT+</span></div>
+            <div class="ep"><span class="verb put">PUT</span><code>/api/admin/users/{id}/role</code><span class="lock">ADMIN only &middot; no self-escalation</span></div>
+            <div class="ep"><span class="verb put">PUT</span><code>/api/admin/users/{id}/lock</code><span class="lock">SUPPORT + ADMIN</span></div>
+            <div class="ep"><span class="verb put">PUT</span><code>/api/admin/users/{id}/unlock</code><span class="lock">SUPPORT + ADMIN</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/api/admin/audit-logs</code><span class="lock">MANAGER+ &middot; filter by event/user/time</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/api/admin/security-events</code><span class="lock">MANAGER+ &middot; by risk level</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/api/admin/risk?userId=</code><span class="lock">MANAGER+</span></div>
+            <div class="ep"><span class="verb get">GET</span><code>/oauth2/authorization/google</code><span class="lock">public &middot; redirect to Google</span></div>
+        </div>
+        <p style="margin-top:12px;" class="muted">Also live today: <code>GET /actuator/health</code>, <code>/v3/api-docs</code>, <code>/swagger-ui.html</code> &mdash; these are in the permit-all list of <code>SecurityConfig</code>.</p>
+    </div>
+</section>
+
+<!-- ============================== RBAC ============================== -->
+<section id="rbac">
+    <div class="wrap">
+        <h2>Who can do what</h2>
+        <p class="lede">Permission matrix from the spec. Enforcement is planned server-side (<code>@PreAuthorize</code>); the role data is already seeded in V2.</p>
+        <table>
+            <tr><th>Endpoint</th><th>USER</th><th>SUPPORT</th><th>MANAGER</th><th>ADMIN</th></tr>
+            <tr><td><code>/api/auth/**</code> (public)</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+            <tr><td><code>/api/users/me</code></td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+            <tr><td><code>/api/sessions/**</code></td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+            <tr><td><code>/api/admin/users</code> (list)</td><td class="no">no</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+            <tr><td><code>/api/admin/users/{id}/lock</code></td><td class="no">no</td><td class="yes">yes</td><td class="no">no</td><td class="yes">yes</td></tr>
+            <tr><td><code>/api/admin/users/{id}/role</code></td><td class="no">no</td><td class="no">no</td><td class="no">no</td><td class="yes">yes</td></tr>
+            <tr><td><code>/api/admin/audit-logs</code></td><td class="no">no</td><td class="no">no</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+            <tr><td><code>/api/admin/security-events</code></td><td class="no">no</td><td class="no">no</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+        </table>
+        <p style="margin-top:12px;" class="muted">The division exists to keep <em>support</em> (who can lock users) separate from <em>admin</em> (who can change roles). Role assignment can never self-promote.</p>
+    </div>
+</section>
+<!-- ============================== RUN IT ============================== -->
+<section id="run">
+    <div class="wrap">
+        <h2>Run it</h2>
+        <p class="lede">Docker is the recommended path. Everything in <code>docker-compose.yml</code>: API, Postgres 16, Redis 7, and MailHog for local email.</p>
+        <div class="prehead"><span>whole stack</span></div>
+        <pre>$ cp .env.example .env
+$ docker compose up --build</pre>
+        <div class="grid cols">
+            <div class="card">
+                <h3>What comes up</h3>
+                <ul>
+                    <li>API &mdash; <code>http://localhost:8080</code></li>
+                    <li>Health &mdash; <code>/actuator/health</code> (and <code>metrics</code>, <code>prometheus</code> exposed)</li>
+                    <li>Swagger UI &mdash; <code>/swagger-ui.html</code>, spec at <code>/v3/api-docs</code></li>
+                    <li>Postgres &mdash; port 5432 &middot; Redis &mdash; port 6379</li>
+                    <li>MailHog UI &mdash; <code>http://localhost:8025</code> (SMTP 1025)</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>Env that matters</h3>
+                <ul>
+                    <li><code>JWT_SECRET</code> &mdash; &ge; 32 chars, dev only</li>
+                    <li><code>DATABASE_URL / USERNAME / PASSWORD</code></li>
+                    <li><code>REDIS_HOST / REDIS_PORT</code></li>
+                    <li><code>CORS_ORIGINS</code> &mdash; allowlist, never <code>*</code> with credentials</li>
+                    <li><code>FRONTEND_URL</code>, <code>GOOGLE_CLIENT_ID/SECRET</code>, <code>MAIL_*</code></li>
+                </ul>
+            </div>
+        </div>
+        <div class="prehead"><span>verify (what CI also runs)</span></div>
+        <pre><span class="c"># sanity-check the compose file</span>
+$ docker compose config --quiet
+
+<span class="c"># Flyway migration state</span>
+$ mvn -f backend/pom.xml flyway:info
+
+<span class="c"># build, without tests</span>
+$ mvn -f backend/pom.xml clean package -DskipTests</pre>
+        <p class="muted" style="font-size:.9rem;">The API boots and Flyway applies V1&ndash;V6. There are no controllers wired yet, so most routes return 404/401 from the security layer &mdash; that&rsquo;s the current milestone boundary, not a broken install.</p>
+    </div>
+</section>
+
+<!-- ============================== DEPLOY ============================== -->
+<section id="deploy">
+    <div class="wrap">
+        <h2>Deployment notes</h2>
+        <p class="lede">From <code>SECUREID_REPORT.md</code>, condensed. Both playbooks run the same docker-compose stack behind a reverse proxy.</p>
+        <div class="grid cols">
+            <div class="card">
+                <h3>AWS &mdash; EC2 t3.micro (12-mo free tier)</h3>
+                <ul>
+                    <li>Ubuntu 24.04, security group: 22 (your IP), 80, 443</li>
+                    <li><code>apt install docker.io</code>, add user to docker group</li>
+                    <li>clone, <code>cp .env.example .env</code>, set prod values, <code>docker compose up -d --build</code></li>
+                    <li>Nginx reverse proxy 80/443 &rarr; <code>localhost:8080</code>; <code>certbot --nginx</code> for TLS</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>GCP &mdash; Compute Engine e2-micro (always free)</h3>
+                <ul>
+                    <li>Region <code>us-central1 / us-east1 / us-west1</code>, 30&nbsp;GB standard disk</li>
+                    <li>Create VPC firewall rules for TCP 80/443 from <code>0.0.0.0/0</code></li>
+                    <li>Same clone + .env + <code>docker compose up -d --build</code></li>
+                </ul>
+            </div>
+        </div>
+        <p style="margin-top:12px;" class="muted">Prod-only env differences: <code>SPRING_PROFILES_ACTIVE=prod</code>, real SMTP, explicit <code>CORS_ORIGINS</code>, RS256 via <code>JWT_PRIVATE_KEY/PUBLIC_KEY</code>, and a real secret. Report has the full step-by-step for both clouds.</p>
+    </div>
+</section>
+
+<!-- ============================== REPO ============================== -->
+<section id="repo">
+    <div class="wrap">
+        <h2>Where things live</h2>
+        <p class="lede">The package layout matches the planned domains; most of them are empty until the next milestone.</p>
+<pre class="dir"><span class="d">backend/src/main/java/com/secureid/</span>
+├── <span class="x">SecureIdApplication.java</span>      <span class="c"># @SpringBootApplication + @EnableAsync</span>
+├── <span class="x">common/</span>                    <span class="c"># ApiResponse, PageResponse, ErrorCode</span>
+├── <span class="x">exception/</span>                 <span class="c"># BusinessException, GlobalExceptionHandler</span>
+├── <span class="x">security/</span>                  <span class="c"># JwtService, JwtAuthenticationFilter</span>
+├── <span class="x">config/</span>                    <span class="c"># Security, Cors, Redis, Jackson, OpenAPI</span>
+├── <span class="x">auth/ user/ role/ session/</span>  <span class="c"># planned — empty</span>
+├── <span class="x">token/ oauth/ audit/ risk/</span>  <span class="c"># planned — empty</span>
+├── <span class="x">admin/ notification/</span>       <span class="c"># planned — empty</span>
+└── <span class="x">resources/db/migration/</span>    <span class="c"># V1..V6 (the most finished part)</span></pre>
+        <div class="doc-links">
+            <a href="README.md">README.md</a>
+            <a href="docs/API.md">docs/API.md</a>
+            <a href="docs/SECURITY.md">docs/SECURITY.md</a>
+            <a href="docs/ARCHITECTURE.md">docs/ARCHITECTURE.md</a>
+            <a href="docs/PRD.md">docs/PRD.md</a>
+            <a href="SECUREID_REPORT.md">SECUREID_REPORT.md</a>
+            <a href="showcase.html">showcase.html (interactive mechanics)</a>
+        </div>
+    </div>
+</section>
+
+<!-- ============================== ROADMAP ============================== -->
+<section id="roadmap">
+    <div class="wrap">
+        <h2>Milestones and honest gaps</h2>
+        <p class="lede">The README roadmap, annotated with where the repo actually is.</p>
+        <table>
+            <tr><th>Milestone</th><th>Contents</th><th>Status</th></tr>
+            <tr><td><b>M1</b> Foundation</td><td>Boot, Postgres, Flyway, User/Role, Docker</td><td class="yes">mostly done &mdash; migrations + Docker ship</td></tr>
+            <tr><td><b>M2</b> Auth</td><td>BCrypt, JWT issue/verify</td><td style="color:var(--amber);">half &mdash; JWT engine + filter done, login endpoint missing</td></tr>
+            <tr><td><b>M3</b> Rotation</td><td>Refresh rotation + reuse detection</td><td class="no">schema + error code only</td></tr>
+            <tr><td><b>M4</b> RBAC</td><td><code>@PreAuthorize</code> enforcement</td><td class="no">roles seeded, no guards yet</td></tr>
+            <tr><td><b>M5</b> Account security</td><td>Rate limit + lockout (Redis)</td><td class="no">keys/limits specced</td></tr>
+            <tr><td><b>M6</b> Session/Audit</td><td>Session list, audit logging</td><td class="no">tables exist (V4/V5)</td></tr>
+            <tr><td><b>M7</b> OAuth</td><td>Google sign-in</td><td class="no">V6 + client config present</td></tr>
+            <tr><td><b>M8</b> Risk</td><td>Anomaly scoring engine</td><td class="no">weights/thresholds configured</td></tr>
+            <tr><td><b>M9 &ndash; M10</b> AI / Prod</td><td>Hardening, deployment</td><td class="no">not started</td></tr>
+        </table>
+        <p style="margin-top:14px;" class="muted"><b>The honest gap:</b> this is a skeleton with a real security spine and a real schema. The next milestone is the auth domain: controllers, services, entities and repositories for register/login/refresh &mdash; the parts the current code and schema already assume exist.</p>
+    </div>
+</section>
+
+<footer>
+    <div class="wrap">
+        <p>Every claim on this page is checkable in the repo &mdash; the README, the docs, <code>application.yml</code>, the Flyway SQL, and the 13 Java files. The &ldquo;spec&rsquo;d&rdquo; labels mark behavior described in the docs that the code does not yet implement.</p>
+        <p style="margin-top:10px;">SecureID &middot; host: <code>premsagar786/jamva</code></p>
+    </div>
+</footer>
+
+<script>
+    var T = {
+        active: "", previous: "", access: null, init: false
+    };
+
+    function log(el, text, cls) {
+        var line = document.createElement("div");
+        line.className = "ln" + (cls ? " " + cls : "");
+        line.textContent = text;
+        el.appendChild(line);
+        el.scrollTop = el.scrollHeight;
+    }
+    function rid() { return "rt_" + Math.random().toString(36).slice(2, 11); }
+
+    var tEl = document.getElementById("t-console");
+    var tLogin = document.getElementById("t-login");
+    var tRefresh = document.getElementById("t-refresh");
+    var tReplay = document.getElementById("t-replay");
+
+    function traceReset() {
+        T.active = ""; T.previous = ""; T.access = null; T.init = false;
+        tEl.innerHTML = "";
+        log(tEl, "engine ready — designed behavior (auth endpoints not implemented)", "warn");
+        tRefresh.disabled = true; tReplay.disabled = true;
+    }
+
+    tLogin.onclick = function () {
+        T.active = rid(); T.previous = ""; T.init = true;
+        T.access = "eyJ" + Math.random().toString(36).slice(2, 18);
+        log(tEl, "POST /api/auth/login  { email, password }", "api");
+        log(tEl, "lockout check: login:failed:user@example.com -> 0  [Redis]", "ok");
+        log(tEl, "BCrypt match -> password valid (work factor 12)", "ok");
+        log(tEl, "session created; issuing pair", "info");
+        log(tEl, "access  : " + T.access.slice(0, 20) + "...  (expires 15m)", "ok");
+        log(tEl, "refresh : " + T.active + "            (expires 7d)", "ok");
+        log(tEl, "stored  : SHA-256(" + T.active + ") in refresh_tokens", "info");
+        tRefresh.disabled = false; tReplay.disabled = false;
+    };
+
+    tRefresh.onclick = function () {
+        if (!T.init) return log(tEl, "login first", "warn");
+        T.previous = T.active; T.active = rid();
+        T.access = "eyJ" + Math.random().toString(36).slice(2, 18);
+        log(tEl, "POST /api/auth/refresh  { refreshToken: " + T.previous + " }", "api");
+        log(tEl, "hash lookup: match, session active", "ok");
+        log(tEl, "rotation: old token revoked, replaced_by=" + T.active, "warn");
+        log(tEl, "new access (15m) + new refresh (7d) issued", "ok");
+    };
+
+    tReplay.onclick = function () {
+        if (!T.init) return log(tEl, "login first", "warn");
+        if (!T.previous) return log(tEl, "rotate once first, so there is an old token to replay", "warn");
+        log(tEl, "POST /api/auth/refresh  { refreshToken: " + T.previous + " }  <-- stolen", "api");
+        log(tEl, "hash lookup: row found but revoked=true, replaced_by=" + T.active, "bad");
+        log(tEl, "TOKEN_REUSE_DETECTED -> revoking session chain", "bad");
+        log(tEl, "sessions.update(revoked) for all rows of this device", "bad");
+        log(tEl, "401 UNAUTHORIZED  { code: TOKEN_REVOKED }", "bad");
+        T.active = ""; T.previous = ""; T.init = false;
+        tRefresh.disabled = true; tReplay.disabled = true;
+    };
+
+    document.getElementById("t-reset").onclick = traceReset;
+    traceReset();
+
+    var rEl = document.getElementById("r-console");
+    var weights = [
+        ["r-device", "NEW_DEVICE_DETECTED", 20],
+        ["r-loc", "NEW_GEOGRAPHIC_LOCATION", 30],
+        ["r-fail", "FAILED_ATTEMPTS_PRESENT", 20],
+        ["r-travel", "IMPOSSIBLE_TRAVEL", 40],
+        ["r-time", "UNUSUAL_ACCESS_HOUR", 10]
+    ];
+    document.getElementById("r-run").onclick = function () {
+        var score = 0, hits = [];
+        weights.forEach(function (w) {
+            if (document.getElementById(w[0]).checked) { score += w[2]; hits.push(w[1] + " (+" + w[2] + ")"); }
+        });
+        log(rEl, "EVALUATE risk for login attempt...", "api");
+        if (!hits.length) log(rEl, "no vectors -> score 0", "info");
+        hits.forEach(function (h) { log(rEl, "  " + h, "warn"); });
+        var verdict, cls;
+        if (score >= 100) { verdict = "CRITICAL — lock account 15m, revoke all sessions"; cls = "bad"; }
+        else if (score >= 60) { verdict = "HIGH — block request, notify by email"; cls = "bad"; }
+        else if (score >= 30) { verdict = "MEDIUM — require MFA (email OTP)"; cls = "warn"; }
+        else { verdict = "LOW — allow authentication"; cls = "ok"; }
+        log(rEl, "score " + score + "  ->  " + verdict, cls);
+    };
+    document.getElementById("r-reset").onclick = function () {
+        weights.forEach(function (w) { document.getElementById(w[0]).checked = false; });
+        rEl.innerHTML = "";
+        log(rEl, "calculator reset — weights from application.yml (spec'd, not live)", "info");
+    };
+    document.getElementById("r-reset").onclick();
+
+    var copyBtn = document.getElementById("copy-cmd");
+    copyBtn.onclick = function () {
+        var cmd = copyBtn.textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(cmd); }
+        copyBtn.textContent = "copied";
+        setTimeout(function () { copyBtn.textContent = cmd; }, 1600);
+    };
+</script>
+
+</body>
+</html>
