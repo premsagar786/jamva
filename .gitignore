@@ -14,3 +14,11 @@ Thumbs.db
 .mvn/wrapper/maven-wrapper.jar
 postgres_data/
 redis_data/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+
+# Local tooling
+.agents/
