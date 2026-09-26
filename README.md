@@ -1,8 +1,8 @@
 # SecureID — Identity & Access Management Platform
 
-Production-grade backend scaffold: Spring Boot 3.x, Java 21, Spring Security 6, PostgreSQL 16, Redis 7, Flyway, JWT (15m) + Refresh Rotation (7d), OAuth2 Google, RBAC, Audit, Risk Engine, Docker & CI.
+Full-stack IAM: **Spring Boot 3.x / Java 21** backend (PostgreSQL 16, Redis 7, Flyway, JWT + Refresh Rotation, OAuth2 Google, RBAC, Audit, Risk Engine, Docker & CI) plus a **React 18 + Vite** admin console in `frontend/`.
 
-> **Scope of this skeleton:** common + exception + security filter (ApiResponse, PageResponse, ErrorCode, JwtService, JwtAuthenticationFilter, SecurityConfig, CORS), Flyway migrations V1–V6, Docker/Compose, env, CI.
+> **Scope of this skeleton:** backend — common + exception + security filter (ApiResponse, PageResponse, ErrorCode, JwtService, JwtAuthenticationFilter, SecurityConfig, CORS), Flyway migrations V1–V6, Docker/Compose, env, CI. Frontend — runnable console UI on a mock service layer that mirrors the backend contract.
 
 ---
 
@@ -12,6 +12,7 @@ Production-grade backend scaffold: Spring Boot 3.x, Java 21, Spring Security 6, 
 - **PostgreSQL 16** + **Flyway** (never `ddl-auto=create` in prod)
 - **Redis 7** (Lettuce) — rate limits, lockout, sessions, risk counters
 - **JWT** — HS256 (dev `JWT_SECRET`) / RS256 prod, JJWT 0.12.6
+- **Frontend** — React 18, Vite 5, React Router 7, Recharts, Framer Motion / GSAP / Three.js, Lucide icons
 - **Docs** — springdoc-openapi, Swagger UI at `/swagger-ui.html`
 - **Testing** — JUnit5, Mockito, Testcontainers (Postgres+Redis), H2
 - **Infra** — Docker multi-stage, Compose, GitHub Actions
@@ -32,9 +33,18 @@ com.secureid
 └── resources/db/migration/  V1..V6
 ```
 
+```
+frontend/          React 18 + Vite admin console
+├── src/pages/     Login, Overview, Users, Sessions, Audit, Security
+├── src/components/ shell/ (AppShell, Topbar), three/ (SphericalNetwork), ui.jsx
+├── src/lib/reactbits/  vendored animation/text/background components
+├── src/services/  api.js (mock, mirrors docs/API.md) + mockData.js
+└── vite.config.js  dev server 127.0.0.1:5173, manual vendor chunks
+```
+
 ---
 
-## Quick Start
+## Quick Start (Backend)
 
 ### 1. Prerequisites
 
@@ -71,6 +81,53 @@ mvn spring-boot:run
 ```
 
 Flyway runs automatically on startup (`baseline-on-migrate: true`, location `classpath:db/migration`).
+
+---
+
+## Frontend (React + Vite)
+
+The admin console runs standalone — **no backend or Docker needed**. It talks to a mock service layer (`frontend/src/services/api.js`) that returns the same `ApiResponse` envelope as the real API, with realistic latency. Swapping in `fetch()` calls is a one-file change.
+
+### 1. Prerequisites
+
+- **Node.js 20+** (verified on v22.15.1) and npm 10+ — check with `node -v` / `npm -v`
+
+### 2. Install & run
+
+```bash
+cd frontend
+npm install          # once; creates node_modules/ (~185 MB, gitignored)
+npm run dev          # Vite dev server with HMR
+```
+
+Open **http://127.0.0.1:5173** (host/port pinned in `frontend/vite.config.js`). HMR applies JSX edits instantly; Three.js/GSAP scenes are the only heavy part on first load.
+
+### 3. Build & preview
+
+```bash
+npm run build        # production bundle -> frontend/dist/
+npm run preview      # serve the built bundle locally
+```
+
+`vite.config.js` splits the bundle into `react`, `motion`, `charts`, `three`, `gsap`, `icons` chunks, so heavy 3D/animation code caches separately from app code.
+
+### 4. Sign in (demo)
+
+Any password works — auth is mocked. Pick an account to see a different state:
+
+| Email | What it demonstrates |
+|-------|----------------------|
+| `ava.chen@secureid.local` | Admin happy path + MFA challenge |
+| `ethan.gray@secureid.local` | Locked account (`ACCOUNT_LOCKED`, 423) |
+| `emma.larsson@secureid.local` | Unverified email (redirect to verify) |
+
+Session persists in `sessionStorage` under `sid.session`; `/overview`, `/users`, `/sessions`, `/audit`, `/security` are behind the auth guard, anything else redirects.
+
+### 5. Notes
+
+- **API calls** — all data flows through `src/services/api.js`; mock fixtures in `src/services/mockData.js`. Nothing else in the app fetches directly.
+- **Wiring the real backend** — point a `fetch` wrapper at `http://localhost:8080/api` and add `http://127.0.0.1:5173` to `CORS_ORIGINS` in `.env` (dev default allows port 3000, not 5173).
+- **Static hosting** — `dist/` is a plain SPA. It uses `BrowserRouter`, so the host needs a rewrite of unknown paths to `index.html`.
 
 ---
 
@@ -192,6 +249,45 @@ docker compose config --quiet && echo "compose ok"
 ## Next Milestones (M1–M10)
 
 M1 Foundation (Boot, Postgres, Flyway, User/Role, Docker) → M2 Auth (BCrypt, JWT) → M3 Rotation → M4 RBAC → M5 Account Security → M6 Session/Audit → M7 OAuth → M8 Risk → M9 AI → M10 Prod.
+
+---
+
+## Push to GitHub
+
+Remote is `https://github.com/premsagar786/jamva.git` (already configured).
+
+```bash
+# 1. Confirm what will be committed — node_modules/, dist/, .env must be ignored
+git status
+
+# 2. Stage (all tracked changes + the new frontend)
+git add -A
+
+# 3. Commit
+git commit -m "feat(frontend): add React + Vite admin console"
+
+# 4. Push
+git push origin main
+```
+
+**What is deliberately not committed** (see `.gitignore`): `node_modules/` (~185 MB), `frontend/dist/` (build output), `.env` / `.env.*.local` (secrets — only `.env.example` is tracked), `target/`, `*.jar`, IDE folders.
+
+First push to a new repo on GitHub? If the branch is not yet `main` or has no upstream:
+
+```bash
+git branch -M main
+git push -u origin main
+```
+
+Useful extras:
+
+```bash
+git log --oneline -10          # review before pushing
+git push --dry-run origin main # see what would go up
+git restore --staged <file>    # unstage a file you didn't mean to add
+```
+
+CI (`.github/workflows/ci.yml`) runs on every push to `main`/`master`/`develop` and on pull requests.
 
 ---
 
